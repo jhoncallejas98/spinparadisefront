@@ -1,0 +1,15 @@
+<div class="card">
+  <h2>Nueva apuesta</h2>
+  <form (ngSubmit)="place()" class="bet-form">
+    <input type="number" [(ngModel)]="gameNumber" name="gameNumber" placeholder="# juego" required class="input" />
+    <select [(ngModel)]="betType" name="betType" class="input">
+      <option value="color">Color</option>
+      <option value="numero">Número</option>
+    </select>
+    <input type="text" [(ngModel)]="betValue" name="betValue" placeholder="rojo/negro/verde o número" required class="input" />
+    <input type="number" [(ngModel)]="amount" name="amount" placeholder="monto" required class="input" />
+    <div class="actions"><button class="btn gold" type="submit">Apostar</button></div>
+    <div *ngIf="message" style="margin-top:8px;color:var(--text-secondary)">{{ message }}</div>
+  </form>
+</div>
+

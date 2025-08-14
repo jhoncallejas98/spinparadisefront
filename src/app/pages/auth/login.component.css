@@ -1,0 +1,64 @@
+.form-card {
+  max-width: 420px;
+  margin: 24px auto;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.08);
+}
+
+.form-title {
+  margin: 0 0 18px 0;
+  font-size: 26px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text-primary);
+}
+
+.form-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.input {
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,.12);
+  background: #fff;
+  color: var(--text-primary);
+  font-size: 15px;
+  transition: border-color 0.2s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--casino-gold);
+  box-shadow: 0 0 0 3px rgba(212,175,55,.1);
+}
+
+.btn-primary {
+  background: var(--casino-gold);
+  color: #111827;
+  border: none;
+  padding: 14px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #b8860b;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error {
+  color: var(--danger);
+  font-size: 14px;
+  margin-top: -4px;
+}
+

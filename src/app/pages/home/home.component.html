@@ -1,0 +1,30 @@
+<section class="card" style="padding: 32px;">
+  <div class="hero">
+    <h1 class="headline">Bienvenido a Spin Paradise</h1>
+    <div class="wheel"></div>
+    <div style="width: 100%; max-width: 520px;">
+      <p class="subhead">Apuesta por color o número y prueba tu suerte. </p>
+
+      <ng-container *ngIf="!isAuth(); else logged">
+        <div class="card form-card" style="margin-top:16px">
+          <h3 style="margin:0 0 8px 0">Ingresa para jugar</h3>
+          <app-login />
+          <div style="text-align:center; margin-top:8px">
+            <a class="nav-link" routerLink="/register">¿No tienes cuenta? Regístrate</a>
+          </div>
+        </div>
+      </ng-container>
+
+      <ng-template #logged>
+        <div class="card" style="margin-top:16px">
+          <div class="cta-row">
+            <button class="btn btn-primary" (click)="goDashboard()">Ir al dashboard</button>
+            <button class="btn secondary" (click)="logout()">Salir</button>
+          </div>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+
+</section>
+

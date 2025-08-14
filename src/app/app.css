@@ -1,0 +1,5 @@
+
+/* Hide Angular starter placeholder */
+.main { display: none !important; }
+.divider, .pill-group, .social-links, .angular-logo { display: none !important; }
+

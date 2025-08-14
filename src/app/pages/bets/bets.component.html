@@ -1,0 +1,27 @@
+<div class="grid cols-2">
+  
+
+  <div class="card">
+    <h3 style="margin-top:0">Historial</h3>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px">
+      <input class="input" placeholder="Buscar..." [(ngModel)]="search" name="search" />
+    </div>
+    <table style="width:100%; border-collapse:collapse">
+      <thead>
+        <tr style="text-align:left">
+          <th># Juego</th>
+          <th>Detalle</th>
+          <th>Fecha</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let b of bets | slice:0:100">
+          <td>{{ b.gameNumber }}</td>
+          <td>{{ formatBet(b) }}</td>
+          <td>{{ b.createdAt | date:'short' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+

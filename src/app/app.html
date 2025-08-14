@@ -339,4 +339,33 @@
 <!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
 
 
-<router-outlet />
+<header class="navbar">
+  <div class="navbar-inner">
+    <div class="brand">
+      <span class="brand-badge"></span>
+      <span>Spin Paradise</span>
+    </div>
+    <nav class="nav-links">
+      <a class="nav-link" routerLink="/home">Inicio</a>
+      
+      <a class="nav-link" routerLink="/dashboard/rounds" *ngIf="isAuth() && !isAdmin()">Juego</a>
+      <a class="nav-link" routerLink="/dashboard/bets" *ngIf="isAuth() && !isAdmin()">Mis apuestas</a>
+      <a class="nav-link" routerLink="/dashboard/admin/users" *ngIf="isAdmin()">Admin</a>
+      <a class="nav-link" routerLink="/dashboard/admin/monitor" *ngIf="isAdmin()">Monitor</a>
+    </nav>
+    <div class="nav-user" *ngIf="isAuth(); else guest">
+      <span class="badge" [class.admin]="isAdmin()" [class.player]="!isAdmin()">{{ isAdmin() ? 'ADMIN' : 'PLAYER' }}</span>
+      <span>{{ currentUser()?.username }}</span>
+      <button class="btn secondary" (click)="logout()">Salir</button>
+    </div>
+    <ng-template #guest>
+      <div class="nav-user">
+        <a class="nav-link" routerLink="/login">Ingresar</a>
+        <a class="nav-link" routerLink="/register">Registro</a>
+      </div>
+    </ng-template>
+  </div>
+</header>
+<div class="container">
+  <router-outlet></router-outlet>
+</div>
