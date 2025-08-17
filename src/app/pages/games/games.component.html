@@ -1,9 +1,69 @@
 <div class="grid">
   <div class="card">
     <h2 style="margin-top:0">Mesa de ruleta</h2>
-    <div class="table layout-row">
-      <div class="left">
-        <div class="mesa-grid">
+    <div class="table new-layout">
+      <!-- Panel de control a la izquierda -->
+      <div class="control-panel">
+        <div class="section">
+          <label>Saldo actual</label>
+          <div style="font-size:22px;color:var(--casino-gold);font-weight:800">{{ user?.balance | currency:'USD':'symbol-narrow' }}</div>
+        </div>
+        <div class="section">
+          <label>Fichas</label>
+          <div class="chips">
+            <div class="chip" data-v="1" (click)="setChip(1)">$1</div>
+            <div class="chip" data-v="5" (click)="setChip(5)">$5</div>
+            <div class="chip" data-v="25" (click)="setChip(25)">$25</div>
+            <div class="chip" data-v="100" (click)="setChip(100)">$100</div>
+            <div class="chip" data-v="500" (click)="setChip(500)">$500</div>
+          </div>
+        </div>
+        <div class="section">
+          <label>Tu apuesta</label>
+          <div>Tipo: <b>{{ betType === 'numero' ? 'Número' : 'Color' }}</b></div>
+          <div *ngIf="betType==='numero'">Número: <b>{{ selectedNumber ?? '-' }}</b></div>
+          <div *ngIf="betType==='color'">Color: <b>{{ selectedColor || '-' }}</b></div>
+          <div>Monto: <b>
+            <input type="number" [(ngModel)]="amount" min="1" style="width:100px" />
+          </b></div>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+            <button class="btn gold" (click)="placeBet()" [disabled]="!canPlaceBet">Apostar</button>
+          </div>
+          <div *ngIf="!currentGameNumber" style="margin-top:6px;color:var(--text-secondary)">Primero inicia "Nueva ronda".</div>
+          <div *ngIf="uiMsg" style="margin-top:8px;color:var(--text-secondary)">{{ uiMsg }}</div>
+        </div>
+        <div class="section">
+          <label>Ronda</label>
+          <div class="steps">
+            <div class="step" [class.active]="gameStatus==='open'">1. Nueva ronda</div>
+            <div class="step" [class.active]="hasBet">2. Apostar</div>
+            <div class="step" [class.active]="gameStatus==='closed'">3. Cerrar</div>
+            <div class="step" [class.active]="gameStatus==='finished'">4. Girar</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn" (click)="open()" [disabled]="gameStatus==='open' || gameStatus==='closed'">Nueva ronda</button>
+            <button class="btn secondary" (click)="close()" [disabled]="!canClose">Cerrar</button>
+            <button class="btn gold" (click)="spin()" [disabled]="!canSpin || isSpinning">{{ isSpinning ? 'Girando...' : 'Girar' }}</button>
+            <button class="btn" (click)="testModal()" style="background: #dc2626; margin-top: 8px;">Test Modal</button>
+          </div>
+          <div *ngIf="message" style="margin-top:8px;color:var(--text-secondary)">{{ message }}</div>
+        </div>
+        <div class="section">
+          <details>
+            <summary>Ayuda y pagos</summary>
+            <ul>
+              <li>Rojo/Negro paga 1:1</li>
+              <li>Número pleno paga 35:1</li>
+            </ul>
+            <small>Ruleta europea: 0 en verde, rojos: 1,3,5,...,36; negros: 2,4,6,...,35</small>
+          </details>
+        </div>
+      </div>
+      
+      <!-- Área principal del juego (ruleta arriba, tablero abajo) -->
+      <div class="game-area">
+        <!-- Ruleta en la parte superior -->
+        <div class="wheel-section">
           <div class="wheel-container">
             <!-- Indicador fijo que NO se mueve -->
             <div class="wheel-pointer"></div>
@@ -48,7 +108,11 @@
               <div class="wheel-number">26</div>
             </div>
           </div>
-          <div class="tapete" style="margin-top:0">
+        </div>
+        
+        <!-- Tablero de apuestas en la parte inferior -->
+        <div class="board-section">
+          <div class="tapete">
             <div class="cell green" (click)="selectNumber(0)">0</div>
             <ng-container *ngFor="let n of [].constructor(36); let i = index">
               <div class="cell" [class.red]="isRed(i+1)" [class.black]="!isRed(i+1)" (click)="selectNumber(i+1)">{{ i+1 }}</div>
@@ -56,61 +120,6 @@
             <div class="color-cell red in-tap" (click)="setBetType('color','rojo')">ROJO</div>
             <div class="color-cell black in-tap" (click)="setBetType('color','negro')">NEGRO</div>
           </div>
-        </div>
-      </div>
-      <div class="panel" style="min-width:420px">
-        <div class="section">
-          <label>Saldo actual</label>
-          <div style="font-size:22px;color:var(--casino-gold);font-weight:800">{{ user?.balance | currency:'USD':'symbol-narrow' }}</div>
-        </div>
-        <div class="section">
-          <label>Fichas</label>
-          <div class="chips">
-            <div class="chip" data-v="1" (click)="setChip(1)">$1</div>
-            <div class="chip" data-v="5" (click)="setChip(5)">$5</div>
-            <div class="chip" data-v="25" (click)="setChip(25)">$25</div>
-            <div class="chip" data-v="100" (click)="setChip(100)">$100</div>
-            <div class="chip" data-v="500" (click)="setChip(500)">$500</div>
-          </div>
-        </div>
-        <div class="section">
-          <label>Tu apuesta</label>
-          <div>Tipo: <b>{{ betType === 'numero' ? 'Número' : 'Color' }}</b></div>
-          <div *ngIf="betType==='numero'">Número: <b>{{ selectedNumber ?? '-' }}</b></div>
-          <div *ngIf="betType==='color'">Color: <b>{{ selectedColor || '-' }}</b></div>
-          <div>Monto: <b>
-            <input type="number" [(ngModel)]="amount" min="1" style="width:100px" />
-          </b></div>
-          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-            <button class="btn gold" (click)="placeBet()" [disabled]="!canPlaceBet">Apostar</button>
-          </div>
-          <div *ngIf="!currentGameNumber" style="margin-top:6px;color:var(--text-secondary)">Primero inicia "Nueva ronda".</div>
-          <div *ngIf="uiMsg" style="margin-top:8px;color:var(--text-secondary)">{{ uiMsg }}</div>
-        </div>
-        <div class="section">
-          <label>Ronda</label>
-          <div class="steps">
-            <div class="step" [class.active]="gameStatus==='open'">1. Nueva ronda</div>
-            <div class="step" [class.active]="hasBet">2. Apostar</div>
-            <div class="step" [class.active]="gameStatus==='closed'">3. Cerrar</div>
-            <div class="step" [class.active]="gameStatus==='finished'">4. Girar</div>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn" (click)="open()" [disabled]="gameStatus==='open' || gameStatus==='closed'">Nueva ronda</button>
-            <button class="btn secondary" (click)="close()" [disabled]="!canClose">Cerrar</button>
-            <button class="btn gold" (click)="spin()" [disabled]="!canSpin || isSpinning">{{ isSpinning ? 'Girando...' : 'Girar' }}</button>
-          </div>
-          <div *ngIf="message" style="margin-top:8px;color:var(--text-secondary)">{{ message }}</div>
-        </div>
-        <div class="section">
-          <details>
-            <summary>Ayuda y pagos</summary>
-            <ul>
-              <li>Rojo/Negro paga 1:1</li>
-              <li>Número pleno paga 35:1</li>
-            </ul>
-            <small>Ruleta europea: 0 en verde, rojos: 1,3,5,...,36; negros: 2,4,6,...,35</small>
-          </details>
         </div>
       </div>
     </div>

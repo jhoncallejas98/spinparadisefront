@@ -8,7 +8,7 @@
 
 .wheel {
   width: 400px;
-  height: 400;
+  height: 400px;
   border-radius: 50%;
   background: conic-gradient(
     /* 0 (green) */
@@ -86,7 +86,7 @@
     /* 26 (black) */
     #111827 350.28deg 360deg
   );
-  box-shadow: 0 6px 18px rgba(0,0,0,.15), inset 0 0 0 6px #fff;
+  box-shadow: 0 8px 24px rgba(0,0,0,.25), inset 0 0 0 8px #d4af37, inset 0 0 0 12px #fff;
   position: relative;
   transition: transform 0.3s ease;
   display: flex;
@@ -185,6 +185,7 @@
   border-left: 15px solid transparent;
   border-right: 15px solid transparent;
   border-top: 25px solid #d4af37;
+  box-shadow: 0 0 10px rgba(212,175,55,0.4);
   z-index: 100;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
 }
@@ -226,11 +227,30 @@
 .panel label { font-size:12px; color:var(--text-secondary) }
 .chips .chip { width: 36px; height: 36px; font-size:12px }
 
-.modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:50 }
-.modal { background: linear-gradient(180deg, var(--surface), var(--surface-2)); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px; width: min(480px, 92%); text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.5) }
-.modal .title { font-size:20px; font-weight:800; margin-bottom:6px }
-.modal .win { color: var(--success); }
-.modal .lose { color: var(--danger); }
+.modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:50; backdrop-filter: blur(4px); }
+.modal { 
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); 
+  border: 3px solid #d4af37; 
+  border-radius: 20px; 
+  padding: 24px; 
+  width: min(520px, 95%); 
+  text-align: center; 
+  box-shadow: 0 25px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(212,175,55,0.2); 
+  color: #1a1a1a;
+  transform: scale(0.9);
+  animation: modalAppear 0.3s ease-out forwards;
+}
+@keyframes modalAppear {
+  to { transform: scale(1); }
+}
+.modal .title { 
+  font-size: 24px; 
+  font-weight: 900; 
+  margin-bottom: 12px; 
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+}
+.modal .win { color: #d4af37; text-shadow: 0 0 10px rgba(212,175,55,0.3); }
+.modal .lose { color: #dc2626; }
 .modal .actions { display:flex; gap:10px; justify-content:center; margin-top:12px }
 
 .color-row { display:flex; gap:10px; }
@@ -243,29 +263,171 @@
 .steps .step { padding:4px 8px; border-radius:6px; background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06) }
 .steps .step.active { border-color: var(--casino-gold); color: var(--casino-gold); }
 
-/* Layout containment and centering */
-.layout-row { display:grid; grid-template-columns: minmax(0,1fr) 460px; gap:28px; align-items:start; overflow:hidden }
-.mesa-grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; align-items:center }
-.mesa-grid .wheel { justify-self:center }
-.mesa-grid .tapete { justify-self:stretch }
-.layout-row .left { min-width: 0; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; position: relative; }
-.layout-row .left .wheel { 
-  margin: 0 auto; 
+/* Nuevo layout: Panel izquierdo, ruleta arriba, tablero abajo */
+.new-layout { 
+  display: grid; 
+  grid-template-columns: 320px 1fr; 
+  gap: 24px; 
+  align-items: start; 
+  overflow: hidden;
+  min-height: 80vh;
+}
+
+/* Panel de control izquierdo */
+.control-panel {
+  background: var(--surface-2);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 16px;
+  height: fit-content;
+  position: sticky;
+  top: 20px;
+}
+
+.control-panel .section {
+  background: rgba(255,255,255,0.02);
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.04);
+  margin-bottom: 12px;
+}
+
+.control-panel .section:last-child {
+  margin-bottom: 0;
+}
+
+/* Área principal del juego */
+.game-area {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* Sección de la ruleta */
+.wheel-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  background: rgba(0,0,0,0.1);
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.wheel-section .wheel-container {
+  position: relative;
+}
+
+/* Sección del tablero */
+.board-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  background: rgba(0,0,0,0.05);
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+  width: 100%;
+  max-width: 800px;
+}
+
+.board-section .tapete {
+  margin: 0;
+  width: 100%;
   max-width: 100%;
+}
+
+/* Responsive para pantallas pequeñas */
+@media (max-width: 1200px) {
+  .new-layout { 
+    grid-template-columns: 1fr; 
+    gap: 16px;
+  }
+  
+  .control-panel {
+    position: static;
+    order: 2;
+  }
+  
+  .game-area {
+    order: 1;
+  }
+  
+  .wheel-section .wheel {
+    width: 300px;
+    height: 300px;
+  }
+  
+  .board-section .tapete {
+    grid-template-columns: repeat(12, minmax(30px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .new-layout {
+    gap: 12px;
+  }
+  
+  .wheel-section .wheel {
+    width: 250px;
+    height: 250px;
+  }
+  
+  .board-section .tapete {
+    grid-template-columns: repeat(12, minmax(25px, 1fr));
+  }
+  
+  .control-panel {
+    padding: 12px;
+  }
+}
+
+/* Ajustes adicionales para el nuevo layout */
+.wheel-section .wheel {
   cursor: pointer;
   user-select: none;
+  margin: 0 auto;
 }
-.layout-row .left .tapete { margin: 6px auto 0; }
-.layout-row .left .color-row { margin: 10px auto 0; }
-.tapete { max-width: 100%; box-sizing: border-box }
-.color-row { justify-content:center }
 
-/* Prevent table overflow on small screens */
-@media (max-width: 1200px) {
-  .layout-row { grid-template-columns: 1fr; }
-  .mesa-grid { grid-template-columns: 1fr; }
-  .panel { width: 100%; min-width: unset; }
-  .tapete { grid-template-columns: repeat(12, minmax(30px, 1fr)); }
-  .cell { width: auto; height: 36px; }
+.board-section .tapete {
+  box-sizing: border-box;
+}
+
+/* Mejoras visuales para el nuevo layout */
+.control-panel label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.control-panel .chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.control-panel .chip {
+  width: 36px;
+  height: 36px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.control-panel .chip:hover {
+  transform: scale(1.1);
+}
+
+/* Botones en el panel de control */
+.control-panel .btn {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.control-panel .btn:last-child {
+  margin-bottom: 0;
 }
 

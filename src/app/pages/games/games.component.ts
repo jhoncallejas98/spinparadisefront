@@ -63,35 +63,73 @@ export class GamesComponent {
   }
 
   refresh() {
-    this.gamesService.listGames().subscribe(g => {
-      this.games = g;
-      const active = g.find(x => x.status === 'open' || x.status === 'closed');
-      this.currentGameNumber = active?.gameNumber;
-      this.gameStatus = (active?.status as any) || '';
-      this.canClose = this.gameStatus === 'open' && this.hasBet;
-      this.canSpin = this.gameStatus === 'closed';
+    this.gamesService.listGames().subscribe({
+      next: (g) => {
+        this.games = g;
+        const active = g.find(x => x.status === 'open' || x.status === 'closed');
+        this.currentGameNumber = active?.gameNumber;
+        this.gameStatus = (active?.status as any) || '';
+        this.canClose = this.gameStatus === 'open' && this.hasBet;
+        this.canSpin = this.gameStatus === 'closed';
+        console.log('Games refreshed:', { games: g.length, active, status: this.gameStatus });
+      },
+      error: (error) => {
+        console.error('Error al cargar juegos:', error);
+        this.message = 'Error de conexión';
+        this.uiMsg = 'No se puede conectar al servidor. Verifica que el backend esté funcionando en http://localhost:3000';
+      }
     });
   }
 
   open() {
-    this.gamesService.openGame().subscribe(res => {
-      this.message = `Juego abierto #${res.gameNumber}`;
-      this.hasBet = false;
-      this.canClose = false;
-      this.canSpin = false;
-      this.gameStatus = 'open';
-      this.refresh();
+    this.message = 'Creando nueva ronda...';
+    this.gamesService.openGame().subscribe({
+      next: (res) => {
+        this.message = `Juego abierto #${res.gameNumber}`;
+        this.hasBet = false;
+        this.canClose = false;
+        this.canSpin = false;
+        this.gameStatus = 'open';
+        this.currentGameNumber = res.gameNumber;
+        this.uiMsg = '';
+        
+        // Limpiar selecciones de apuesta
+        this.selectedColor = '';
+        this.selectedNumber = null;
+        this.amount = 10;
+        
+        // NO reiniciar la ruleta - mantener su posición actual
+        this.refresh();
+        console.log('Nueva ronda creada exitosamente:', res);
+      },
+      error: (error) => {
+        console.error('Error al crear nueva ronda:', error);
+        this.message = 'Error al crear nueva ronda';
+        this.uiMsg = error?.error?.msg || 'No se pudo conectar al servidor. Verifica que el backend esté funcionando.';
+      }
     });
   }
 
   close() {
-    if (!this.currentGameNumber) return;
-    this.gamesService.closeGame(this.currentGameNumber).subscribe(() => {
-      this.message = `Juego #${this.currentGameNumber} cerrado`;
-      this.gameStatus = 'closed';
-      this.canClose = false;
-      this.canSpin = true;
-      this.refresh();
+    if (!this.currentGameNumber) {
+      this.uiMsg = 'No hay ronda activa para cerrar';
+      return;
+    }
+    this.message = 'Cerrando ronda...';
+    this.gamesService.closeGame(this.currentGameNumber).subscribe({
+      next: () => {
+        this.message = `Juego #${this.currentGameNumber} cerrado`;
+        this.gameStatus = 'closed';
+        this.canClose = false;
+        this.canSpin = true;
+        this.uiMsg = '';
+        this.refresh();
+      },
+      error: (error) => {
+        console.error('Error al cerrar ronda:', error);
+        this.message = 'Error al cerrar ronda';
+        this.uiMsg = error?.error?.msg || 'No se pudo cerrar la ronda';
+      }
     });
   }
 
@@ -100,10 +138,6 @@ export class GamesComponent {
     
     // Start spinning animation
     this.isSpinning = true;
-    // Remove any previous classes and reset transform
-    const wheel = this.gameWheel.nativeElement;
-    wheel.classList.remove('spinning-to-result');
-    wheel.style.transform = 'rotate(0deg)'; // Reset position
     this.message = '¡Girando la ruleta...';
     
     console.log('Iniciando animación de giro...');
@@ -155,7 +189,10 @@ export class GamesComponent {
         // Crear animación dinámica
         const wheel = this.gameWheel.nativeElement;
         
-        // Usar un timeout como respaldo en caso de que animationend falle
+        // Limpiar clases anteriores
+        wheel.classList.remove('spinning-to-result');
+        
+        // Función para mostrar resultados
         const showResultsNow = () => {
           console.log('¡MOSTRANDO RESULTADOS AHORA!');
           
@@ -166,10 +203,12 @@ export class GamesComponent {
           // Limpiar mensaje de giro
           this.message = '';
           
-          // FORZAR la aparición del modal
-          this.showResultModal = true;
+          // FORZAR la aparición del modal - usar setTimeout para asegurar que Angular detecte el cambio
+          setTimeout(() => {
+            this.showResultModal = true;
+            console.log('✅ Modal activado después de timeout:', this.showResultModal);
+          }, 100);
           
-          console.log('✅ Modal activado:', this.showResultModal);
           console.log('✅ Datos completos:', {
             won: this.won,
             number: this.lastWinningNumber,
@@ -227,12 +266,39 @@ export class GamesComponent {
           this.gameWheel.nativeElement.classList.remove('spinning-to-result');
         }
         this.isSpinning = false;
+        this.message = '';
         this.uiMsg = e?.error?.msg || 'No se pudo girar. Cierra la ronda antes de girar.';
       }
     });
   }
 
-  closeResult() { this.showResultModal = false; }
+  closeResult() { 
+    this.showResultModal = false; 
+    
+    // Limpiar estado después de cerrar el modal
+    this.lastWinningNumber = undefined;
+    this.lastWinningColor = undefined;
+    this.resultMsg = '';
+    this.won = false;
+    
+    // Limpiar selecciones de apuesta para la siguiente ronda
+    this.selectedColor = '';
+    this.selectedNumber = null;
+    this.amount = 10;
+    
+    // Actualizar el estado del juego
+    this.refresh();
+  }
+
+  // Método de prueba para verificar que el modal funciona
+  testModal() {
+    this.lastWinningNumber = 7;
+    this.lastWinningColor = 'negro';
+    this.won = true;
+    this.resultMsg = '¡Ganaste! Pago estimado $20';
+    this.showResultModal = true;
+    console.log('Modal de prueba activado:', this.showResultModal);
+  }
 
   // UI helpers
   isRed(n: number): boolean {
