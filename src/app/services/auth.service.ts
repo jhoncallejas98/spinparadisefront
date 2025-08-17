@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { Observable, tap, catchError, of } from 'rxjs';
 
+// Interfaz para el usuario autenticado
 export interface AuthUser {
   id: string;
   email: string;
@@ -11,6 +12,7 @@ export interface AuthUser {
   role?: 'player' | 'admin';
 }
 
+// Respuesta del login
 export interface LoginResponse {
   token: string;
   user: AuthUser;
@@ -23,10 +25,12 @@ export class AuthService {
 
   constructor(private http: HttpClient) {}
 
+  // Registrar un nuevo usuario
   register(username: string, email: string, password: string): Observable<AuthUser> {
     return this.http.post<AuthUser>(`${environment.apiUrl}/api/users`, { username, email, password });
   }
 
+  // Iniciar sesión
   login(email: string, password: string): Observable<LoginResponse> {
     return this.http
       .post<LoginResponse>(`${environment.apiUrl}/api/auth/login`, { email, password })
@@ -38,40 +42,46 @@ export class AuthService {
       );
   }
 
+  // Cerrar sesión
   logout(): void {
     localStorage.removeItem(this.tokenKey);
     localStorage.removeItem(this.userKey);
   }
 
+  // Guardar el token en localStorage
   setToken(token: string): void {
     localStorage.setItem(this.tokenKey, token);
   }
 
+  // Obtener el token del localStorage
   getToken(): string | null {
     if (typeof localStorage === 'undefined') return null;
     return localStorage.getItem(this.tokenKey);
   }
 
+  // Guardar el usuario en localStorage
   setCurrentUser(user: AuthUser): void {
     localStorage.setItem(this.userKey, JSON.stringify(user));
   }
 
+  // Obtener el usuario del localStorage
   getCurrentUser(): (AuthUser & { role?: 'player' | 'admin' }) | null {
     if (typeof localStorage === 'undefined') return null;
     const raw = localStorage.getItem(this.userKey);
     return raw ? (JSON.parse(raw) as AuthUser) : null;
   }
 
+  // Verificar si el usuario está autenticado
   isAuthenticated(): boolean {
     return !!this.getToken();
   }
 
+  // Actualizar datos del usuario desde el servidor
   refreshCurrentUser() {
     const token = this.getToken();
     if (!token) {
       return this.http.get<null>('about:blank');
     }
-    // Intentar obtener el usuario actual si el backend lo soporta
     return this.http.get<AuthUser>(`${environment.apiUrl}/api/users/me`).pipe(
       tap((user) => {
         if (user) this.setCurrentUser(user);
@@ -79,61 +89,43 @@ export class AuthService {
     );
   }
 
+  // Actualizar saldo localmente (sin ir al servidor)
   updateBalanceLocallyBy(delta: number) {
-    console.log('🔍 DEPURACIÓN - AuthService.updateBalanceLocallyBy:');
-    console.log('  - Delta recibido:', delta);
-    
     const user = this.getCurrentUser();
     if (!user) {
-      console.log('  - ERROR: No hay usuario logueado');
       return;
     }
     
-    console.log('  - Saldo anterior:', user.balance);
     user.balance = Math.max(0, (user.balance || 0) + delta);
-    console.log('  - Saldo nuevo:', user.balance);
-    
     this.setCurrentUser(user);
-    console.log('  - Usuario actualizado en localStorage');
   }
 
-  // Método para actualizar saldo en el backend
+  // Actualizar saldo en el servidor
   updateBalanceInBackend(delta: number): Observable<AuthUser> {
-    console.log('🔍 DEPURACIÓN - Actualizando saldo en backend:', delta);
-    
     return this.http.post<AuthUser>(`${environment.apiUrl}/api/users/balance`, { delta }).pipe(
       tap((updatedUser) => {
-        console.log('🔍 DEPURACIÓN - Saldo actualizado en backend:', updatedUser.balance);
         this.setCurrentUser(updatedUser);
       })
     );
   }
 
-  // Método para sincronizar saldo con el backend
+  // Sincronizar saldo desde el servidor
   syncBalanceFromBackend(): Observable<AuthUser> {
-    console.log('🔍 DEPURACIÓN - Sincronizando saldo desde backend');
-    
     return this.http.get<AuthUser>(`${environment.apiUrl}/api/users/me`).pipe(
       tap((user) => {
-        console.log('🔍 DEPURACIÓN - Saldo sincronizado desde backend:', user.balance);
         this.setCurrentUser(user);
       })
     );
   }
 
-  // Método para sincronizar saldo de forma segura (con manejo de errores)
+  // Sincronizar saldo de forma segura (con manejo de errores)
   syncBalanceSafely(): Observable<AuthUser | null> {
-    console.log('🔍 DEPURACIÓN - Sincronización segura de saldo');
-    
     return this.http.get<AuthUser>(`${environment.apiUrl}/api/users/me`).pipe(
       tap((user) => {
-        console.log('🔍 DEPURACIÓN - Saldo sincronizado exitosamente:', user.balance);
         this.setCurrentUser(user);
       }),
-      // Manejar errores sin romper la aplicación
       catchError((error) => {
-        console.warn('⚠️ No se pudo sincronizar saldo desde backend, usando saldo local:', error);
-        // Retornar el usuario local en caso de error
+        console.warn('No se pudo sincronizar saldo desde backend, usando saldo local');
         const localUser = this.getCurrentUser();
         return of(localUser);
       })

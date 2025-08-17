@@ -4,6 +4,7 @@ import { adminGuard } from './guards/admin.guard';
 import { homeGuard } from './guards/home.guard';
 import { playerGuard } from './guards/player.guard';
 
+// Configuración de rutas de la aplicación
 export const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
   { path: 'home', canActivate: [homeGuard], loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent) },
@@ -32,11 +33,15 @@ export const routes: Routes = [
     ]
   },
   { path: 'not-authorized', loadComponent: () => import('./pages/shared/not-authorized.component').then(m => m.NotAuthorizedComponent) },
-  // Aliases en español
+  
+  // Rutas en español para mejor UX
   { path: 'juego', canActivate: [authGuard, playerGuard], loadComponent: () => import('./pages/games/games.component').then(m => m.GamesComponent) },
   { path: 'apuestas', canActivate: [authGuard], loadComponent: () => import('./pages/bets/bets.component').then(m => m.BetsComponent) },
-  // Compatibilidad con rutas cortas previas
+  
+  // Redirecciones para compatibilidad
   { path: 'games', redirectTo: '/dashboard/rounds', pathMatch: 'full' },
   { path: 'bets', redirectTo: '/dashboard/bets', pathMatch: 'full' },
+  
+  // Ruta para páginas no encontradas
   { path: '**', loadComponent: () => import('./pages/shared/not-found.component').then(m => m.NotFoundComponent) }
 ];

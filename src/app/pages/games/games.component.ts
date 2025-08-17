@@ -18,14 +18,14 @@ export class GamesComponent {
   message = '';
   user: ReturnType<AuthService['getCurrentUser']> = null;
   
-  // Estado de la interfaz
+  // Configuración de la apuesta
   betType: 'color' | 'numero' = 'color';
   selectedColor: 'rojo' | 'negro' | '' = '';
   selectedNumber: number | null = null;
   amount = 10;
   uiMsg = '';
   
-  // Estado del modal de resultados
+  // Resultados del juego
   lastWinningNumber?: number;
   lastWinningColor?: 'rojo'|'negro'|'verde';
   resultMsg = '';
@@ -39,13 +39,13 @@ export class GamesComponent {
   canSpin = false;
   isSpinning = false;
 
-  // Variables para actualizar saldo al cerrar modal
+  // Variables para actualizar saldo después del modal
   pendingBalanceUpdate = 0;
   pendingBalanceDelta = 0;
 
   @ViewChild('gameWheel') gameWheel!: ElementRef<HTMLDivElement>;
 
-  // Orden de números en la ruleta europea
+  // Números de la ruleta europea en orden
   private readonly wheelNumbers = [
     0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5,
     24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26
@@ -60,7 +60,7 @@ export class GamesComponent {
   ) {
     this.user = this.auth.getCurrentUser();
     
-    // Sincronizar saldo desde el backend de forma segura
+    // Sincronizar saldo con el servidor
     this.auth.syncBalanceSafely().subscribe({
       next: (user) => {
         if (user) {
@@ -75,6 +75,7 @@ export class GamesComponent {
     this.refresh();
   }
 
+  // Calcular el ángulo para que la ruleta se detenga en el número correcto
   private getAngleForNumber(number: number): number {
     const index = this.wheelNumbers.indexOf(number);
     if (index === -1) {
@@ -116,7 +117,7 @@ export class GamesComponent {
         this.currentGameNumber = res.gameNumber;
         this.uiMsg = '';
         
-        // Limpiar selecciones de apuesta para nueva ronda
+        // Limpiar selecciones para la nueva ronda
         this.selectedColor = '';
         this.selectedNumber = null;
         this.amount = 10;
@@ -162,26 +163,26 @@ export class GamesComponent {
     
     this.gamesService.spin(this.currentGameNumber).subscribe({ 
       next: (g) => {
-        // Preparar datos del resultado
+        // Obtener el número ganador del servidor
         this.lastWinningNumber = g.winningNumber;
         
-        // Calcular color del número ganador
+        // Determinar el color del número ganador
         let color = 'verde';
         if (g.winningNumber && g.winningNumber > 0) {
           color = this.isRed(g.winningNumber) ? 'rojo' : 'negro';
         }
         this.lastWinningColor = color as any;
         
-        // Calcular ganancias
+        // Calcular si ganó y cuánto
         let won = false;
         let payout = 0;
         if (this.betType === 'color' && this.selectedColor) {
           won = (this.selectedColor === color);
-          // Si ganas, recibes tu apuesta de vuelta + ganancias (1:1)
+          // Apuesta por color paga 1:1 (apuesta + ganancia)
           payout = won ? this.amount + this.amount : 0;
         } else if (this.betType === 'numero' && this.selectedNumber !== null) {
           won = (this.selectedNumber === g.winningNumber);
-          // Si ganas, recibes tu apuesta de vuelta + ganancias (35:1)
+          // Apuesta por número paga 35:1 (apuesta + 35x ganancia)
           payout = won ? this.amount + (this.amount * 35) : 0;
         }
         
@@ -190,21 +191,16 @@ export class GamesComponent {
           ? `¡Ganaste! Pago estimado ${payout}`
           : 'Perdiste esta ronda';
         
-        // Guardar datos para actualizar saldo al cerrar modal
+        // Guardar para actualizar saldo cuando se cierre el modal
         if (won) {
-          // Si ganas, recibes el pago completo (apuesta + ganancias)
           this.pendingBalanceUpdate = payout;
           this.pendingBalanceDelta = 0;
         } else {
-          // Si pierdes, solo pierdes tu apuesta
           this.pendingBalanceUpdate = 0;
           this.pendingBalanceDelta = -this.amount;
         }
         
-        // NO actualizar saldo aquí - se hará al cerrar el modal
-        // this.user = this.auth.getCurrentUser();
-        
-        // Animar la ruleta
+        // Animar la ruleta hacia el número ganador
         this.animateWheel(g.winningNumber!);
       }, 
       error: (e: any) => {
@@ -214,22 +210,19 @@ export class GamesComponent {
     });
   }
 
+  // Animar la ruleta para que se detenga en el número ganador
   private animateWheel(winningNumber: number) {
     const wheel = this.gameWheel.nativeElement;
     const targetAngle = this.getAngleForNumber(winningNumber);
-    const finalRotation = 1080 + targetAngle;
+    const finalRotation = 1080 + targetAngle; // 3 vueltas + posición final
     
-    // Limpiar animación anterior
     wheel.classList.remove('spinning-to-result');
-    
-    // Configurar nueva animación
     wheel.style.setProperty('--final-rotation', `${finalRotation}deg`);
     
-    // Iniciar animación
     setTimeout(() => {
       wheel.classList.add('spinning-to-result');
       
-      // Escuchar fin de animación
+      // Mostrar resultados cuando termine la animación
       const onAnimationEnd = () => {
         wheel.removeEventListener('animationend', onAnimationEnd);
         this.showResults();
@@ -237,7 +230,7 @@ export class GamesComponent {
       
       wheel.addEventListener('animationend', onAnimationEnd);
       
-      // Respaldo por si no se dispara el evento
+      // Respaldo por si no se dispara el evento de animación
       setTimeout(() => {
         if (this.isSpinning) {
           this.showResults();
@@ -246,17 +239,17 @@ export class GamesComponent {
     }, 100);
   }
 
+  // Mostrar el modal con los resultados
   private showResults() {
     this.ngZone.run(() => {
       this.isSpinning = false;
       this.message = '';
       this.showResultModal = true;
-      
-      // Forzar detección de cambios
       this.cdr.detectChanges();
     });
   }
 
+  // Detener la animación de la ruleta
   private stopSpinning() {
     if (this.gameWheel?.nativeElement) {
       this.gameWheel.nativeElement.classList.remove('spinning-to-result');
@@ -268,27 +261,22 @@ export class GamesComponent {
   closeResult() { 
     this.showResultModal = false; 
     
-    // Limpiar estado del modal
+    // Limpiar datos del resultado
     this.lastWinningNumber = undefined;
     this.lastWinningColor = undefined;
     this.resultMsg = '';
     this.won = false;
     
-    // NO limpiar selecciones aquí - mantenerlas para la siguiente ronda
-    // this.selectedColor = '';
-    // this.selectedNumber = null;
-    // this.amount = 10;
-    
-    // Reiniciar ruleta
+    // Reiniciar la ruleta a su posición inicial
     this.resetWheel();
     
-    // Actualizar saldo al cerrar modal
+    // Actualizar el saldo del usuario
     if (this.pendingBalanceUpdate > 0) {
-      // Primero actualizar localmente para respuesta inmediata
+      // Actualizar localmente primero para respuesta inmediata
       this.auth.updateBalanceLocallyBy(this.pendingBalanceUpdate);
       this.user = this.auth.getCurrentUser();
       
-      // Luego intentar sincronizar con backend
+      // Luego sincronizar con el servidor
       this.auth.updateBalanceInBackend(this.pendingBalanceUpdate).subscribe({
         next: (user) => {
           this.user = user;
@@ -299,11 +287,11 @@ export class GamesComponent {
       });
       this.pendingBalanceUpdate = 0;
     } else if (this.pendingBalanceDelta !== 0) {
-      // Primero actualizar localmente para respuesta inmediata
+      // Actualizar localmente primero para respuesta inmediata
       this.auth.updateBalanceLocallyBy(this.pendingBalanceDelta);
       this.user = this.auth.getCurrentUser();
       
-      // Luego intentar sincronizar con backend
+      // Luego sincronizar con el servidor
       this.auth.updateBalanceInBackend(this.pendingBalanceDelta).subscribe({
         next: (user) => {
           this.user = user;
@@ -315,15 +303,15 @@ export class GamesComponent {
       this.pendingBalanceDelta = 0;
     }
     
-    // Actualizar estado del juego
     this.refresh();
     
-    // Sincronizar saldo automáticamente después de cerrar modal
+    // Sincronizar saldo después de un segundo
     setTimeout(() => {
       this.syncBalanceAuto();
-    }, 1000); // Esperar 1 segundo para que se complete la actualización
+    }, 1000);
   }
 
+  // Reiniciar la ruleta a su posición inicial
   private resetWheel() {
     if (this.gameWheel?.nativeElement) {
       const wheel = this.gameWheel.nativeElement;
@@ -333,9 +321,8 @@ export class GamesComponent {
     }
   }
 
-  // Método para sincronizar saldo automáticamente
+  // Sincronizar saldo con el servidor automáticamente
   private syncBalanceAuto() {
-    // Sincronizar saldo en segundo plano sin mostrar errores
     this.auth.syncBalanceSafely().subscribe({
       next: (user) => {
         if (user) {
@@ -348,23 +335,25 @@ export class GamesComponent {
     });
   }
 
-  // Métodos auxiliares de la interfaz
+  // Verificar si un número es rojo en la ruleta
   isRed(n: number): boolean {
     const redNumbers = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
-    const isRed = redNumbers.includes(n);
-    return isRed;
+    return redNumbers.includes(n);
   }
   
+  // Seleccionar un número para apostar
   selectNumber(n: number) {
     this.betType = 'numero';
     this.selectedNumber = n;
     this.selectedColor = '';
   }
   
+  // Cambiar el valor de la ficha
   setChip(v: number) { 
     this.amount = v; 
   }
   
+  // Cambiar el tipo de apuesta (color o número)
   setBetType(type: 'color'|'numero', color?: 'rojo'|'negro') {
     this.betType = type;
     if (type === 'color') {
@@ -373,6 +362,7 @@ export class GamesComponent {
     }
   }
   
+  // Verificar si se puede hacer una apuesta
   get canPlaceBet(): boolean {
     const hasSelection = (this.betType === 'color' && !!this.selectedColor) || 
                         (this.betType === 'numero' && this.selectedNumber !== null);
@@ -381,6 +371,7 @@ export class GamesComponent {
     return !!this.currentGameNumber && this.gameStatus === 'open' && hasSelection && this.amount > 0 && hasEnoughBalance;
   }
   
+  // Crear una apuesta
   placeBet() {
     if (!this.currentGameNumber) { 
       this.uiMsg = 'No hay una ronda abierta.'; 
@@ -412,7 +403,7 @@ export class GamesComponent {
         this.hasBet = true;
         this.canClose = true;
         
-        // Sincronizar saldo después de crear apuesta
+        // Sincronizar saldo después de crear la apuesta
         this.syncBalanceAuto();
         
         this.refresh();
