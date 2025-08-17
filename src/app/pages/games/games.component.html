@@ -44,7 +44,6 @@
             <button class="btn" (click)="open()" [disabled]="gameStatus==='open' || gameStatus==='closed'">Nueva ronda</button>
             <button class="btn secondary" (click)="close()" [disabled]="!canClose">Cerrar</button>
             <button class="btn gold" (click)="spin()" [disabled]="!canSpin || isSpinning">{{ isSpinning ? 'Girando...' : 'Girar' }}</button>
-            <button class="btn" (click)="testModal()" style="background: #dc2626; margin-top: 8px;">Test Modal</button>
           </div>
           <div *ngIf="message" style="margin-top:8px;color:var(--text-secondary)">{{ message }}</div>
         </div>
@@ -125,18 +124,39 @@
     </div>
   </div>
 
-  <ng-container *ngIf="showResultModal">
-    <div class="modal-backdrop" (click)="closeResult()">
-      <div class="modal" (click)="$event.stopPropagation()">
-        <div class="title" [class.win]="won" [class.lose]="!won">{{ won ? '¡GANASTE!' : 'PERDISTE' }}</div>
-        <div style="margin-top:8px; font-size:18px;">Número ganador: <b style="color:var(--casino-gold);">{{ lastWinningNumber }}</b> <span [style.color]="lastWinningColor === 'rojo' ? '#dc2626' : lastWinningColor === 'negro' ? '#111827' : '#0b6b3a'">({{ lastWinningColor }})</span></div>
-        <div *ngIf="won" style="margin-top:8px; color:var(--success); font-size:16px; font-weight:bold;">{{ resultMsg }}</div>
-        <div *ngIf="!won" style="margin-top:8px; color:var(--danger); font-size:16px;">Inténtalo de nuevo en la próxima ronda</div>
-        <div class="actions" style="margin-top:16px;">
-          <button class="btn secondary" (click)="closeResult()">Cerrar</button>
+  <!-- Modal de resultados -->
+  <div *ngIf="showResultModal" class="modal-backdrop" (click)="closeResult()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h2 class="modal-title" [class.win]="won" [class.lose]="!won">
+        {{ won ? '¡GANASTE!' : 'PERDISTE' }}
+      </h2>
+      
+      <div class="modal-content">
+        <div class="result-info">
+          <span class="label">Número ganador:</span>
+          <span class="number" [style.color]="lastWinningColor === 'rojo' ? '#dc2626' : lastWinningColor === 'negro' ? '#111827' : '#0b6b3a'">
+            {{ lastWinningNumber }}
+          </span>
+          <span class="color" [style.color]="lastWinningColor === 'rojo' ? '#dc2626' : lastWinningColor === 'negro' ? '#111827' : '#0b6b3a'">
+            ({{ lastWinningColor }})
+          </span>
+        </div>
+        
+        <div *ngIf="won" class="win-message">
+          {{ resultMsg }}
+        </div>
+        
+        <div *ngIf="!won" class="lose-message">
+          Inténtalo de nuevo en la próxima ronda
         </div>
       </div>
+      
+      <div class="modal-actions">
+        <button class="btn btn-primary" (click)="closeResult()">
+          Continuar
+        </button>
+      </div>
     </div>
-  </ng-container>
+  </div>
 </div>
 

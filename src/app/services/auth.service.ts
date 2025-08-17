@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, catchError, of } from 'rxjs';
 
 export interface AuthUser {
   id: string;
@@ -80,10 +80,64 @@ export class AuthService {
   }
 
   updateBalanceLocallyBy(delta: number) {
+    console.log('🔍 DEPURACIÓN - AuthService.updateBalanceLocallyBy:');
+    console.log('  - Delta recibido:', delta);
+    
     const user = this.getCurrentUser();
-    if (!user) return;
+    if (!user) {
+      console.log('  - ERROR: No hay usuario logueado');
+      return;
+    }
+    
+    console.log('  - Saldo anterior:', user.balance);
     user.balance = Math.max(0, (user.balance || 0) + delta);
+    console.log('  - Saldo nuevo:', user.balance);
+    
     this.setCurrentUser(user);
+    console.log('  - Usuario actualizado en localStorage');
+  }
+
+  // Método para actualizar saldo en el backend
+  updateBalanceInBackend(delta: number): Observable<AuthUser> {
+    console.log('🔍 DEPURACIÓN - Actualizando saldo en backend:', delta);
+    
+    return this.http.post<AuthUser>(`${environment.apiUrl}/api/users/balance`, { delta }).pipe(
+      tap((updatedUser) => {
+        console.log('🔍 DEPURACIÓN - Saldo actualizado en backend:', updatedUser.balance);
+        this.setCurrentUser(updatedUser);
+      })
+    );
+  }
+
+  // Método para sincronizar saldo con el backend
+  syncBalanceFromBackend(): Observable<AuthUser> {
+    console.log('🔍 DEPURACIÓN - Sincronizando saldo desde backend');
+    
+    return this.http.get<AuthUser>(`${environment.apiUrl}/api/users/me`).pipe(
+      tap((user) => {
+        console.log('🔍 DEPURACIÓN - Saldo sincronizado desde backend:', user.balance);
+        this.setCurrentUser(user);
+      })
+    );
+  }
+
+  // Método para sincronizar saldo de forma segura (con manejo de errores)
+  syncBalanceSafely(): Observable<AuthUser | null> {
+    console.log('🔍 DEPURACIÓN - Sincronización segura de saldo');
+    
+    return this.http.get<AuthUser>(`${environment.apiUrl}/api/users/me`).pipe(
+      tap((user) => {
+        console.log('🔍 DEPURACIÓN - Saldo sincronizado exitosamente:', user.balance);
+        this.setCurrentUser(user);
+      }),
+      // Manejar errores sin romper la aplicación
+      catchError((error) => {
+        console.warn('⚠️ No se pudo sincronizar saldo desde backend, usando saldo local:', error);
+        // Retornar el usuario local en caso de error
+        const localUser = this.getCurrentUser();
+        return of(localUser);
+      })
+    );
   }
 }
 
