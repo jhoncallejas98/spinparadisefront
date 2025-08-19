@@ -1,8 +1,9 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { Observable, tap, catchError, of } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { isPlatformBrowser } from '@angular/common';
 
 // Interfaz para el usuario autenticado
 export interface AuthUser {
@@ -23,8 +24,14 @@ export interface LoginResponse {
 export class AuthService {
   private readonly tokenKey = 'token';
   private readonly userKey = 'user';
+  private platformId = inject(PLATFORM_ID);
 
   constructor(private http: HttpClient) {}
+
+  // Verificar si estamos en el navegador
+  private isBrowser(): boolean {
+    return isPlatformBrowser(this.platformId);
+  }
 
   // Registrar un nuevo usuario
   register(username: string, email: string, password: string): Observable<AuthUser> {
@@ -51,23 +58,27 @@ export class AuthService {
 
   // Guardar el token en localStorage
   setToken(token: string): void {
-    localStorage.setItem(this.tokenKey, token);
+    if (this.isBrowser()) {
+      localStorage.setItem(this.tokenKey, token);
+    }
   }
 
   // Obtener el token del localStorage
   getToken(): string | null {
-    if (typeof localStorage === 'undefined') return null;
+    if (!this.isBrowser()) return null;
     return localStorage.getItem(this.tokenKey);
   }
 
   // Guardar el usuario en localStorage
   setCurrentUser(user: AuthUser): void {
-    localStorage.setItem(this.userKey, JSON.stringify(user));
+    if (this.isBrowser()) {
+      localStorage.setItem(this.userKey, JSON.stringify(user));
+    }
   }
 
   // Obtener el usuario del localStorage
   getCurrentUser(): (AuthUser & { role?: 'player' | 'admin' }) | null {
-    if (typeof localStorage === 'undefined') return null;
+    if (!this.isBrowser()) return null;
     const raw = localStorage.getItem(this.userKey);
     return raw ? (JSON.parse(raw) as AuthUser) : null;
   }
@@ -79,6 +90,12 @@ export class AuthService {
 
   // Obtener el saldo actual desde el backend
   getCurrentBalance(): Observable<number> {
+    // Si no estamos en el navegador, retornar el saldo local
+    if (!this.isBrowser()) {
+      const user = this.getCurrentUser();
+      return of(user?.balance || 0);
+    }
+
     return this.http.get<{ balance: number }>(`${environment.apiUrl}/api/me/balance`).pipe(
       map(response => response.balance),
       tap(balance => {
@@ -104,12 +121,22 @@ export class AuthService {
     if (!user) {
       return this.http.get<null>('about:blank');
     }
+    
+    // Si no estamos en el navegador, retornar el usuario local
+    if (!this.isBrowser()) {
+      return of(user);
+    }
+    
     // Obtener el saldo actualizado desde el backend
     return this.getCurrentBalance().pipe(
       map(balance => {
         const updatedUser = { ...user, balance };
         this.setCurrentUser(updatedUser);
         return updatedUser;
+      }),
+      catchError(error => {
+        console.warn('Error al refrescar usuario, usando datos locales:', error);
+        return of(user);
       })
     );
   }
@@ -127,6 +154,12 @@ export class AuthService {
 
   // Sincronizar saldo desde el backend usando el nuevo endpoint
   syncBalanceFromBackend(): Observable<AuthUser> {
+    // Si no estamos en el navegador, retornar el usuario local
+    if (!this.isBrowser()) {
+      const user = this.getCurrentUser();
+      return of(user as AuthUser);
+    }
+
     return this.getCurrentBalance().pipe(
       map(balance => {
         const user = this.getCurrentUser();
@@ -142,6 +175,12 @@ export class AuthService {
 
   // Sincronizar saldo de forma segura (con manejo de errores)
   syncBalanceSafely(): Observable<AuthUser | null> {
+    // Si no estamos en el navegador, retornar el usuario local
+    if (!this.isBrowser()) {
+      const user = this.getCurrentUser();
+      return of(user);
+    }
+
     return this.getCurrentBalance().pipe(
       map(balance => {
         const user = this.getCurrentUser();
