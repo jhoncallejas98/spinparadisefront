@@ -100,20 +100,32 @@ export class AuthService {
     this.setCurrentUser(user);
   }
 
-  // Actualizar saldo en el servidor
+  // Actualizar saldo en el backend
   updateBalanceInBackend(delta: number): Observable<AuthUser> {
-    return this.http.post<AuthUser>(`${environment.apiUrl}/api/users/balance`, { delta }).pipe(
+    // Usar el endpoint que sí existe para ajustar balance
+    return this.http.post<AuthUser>(`${environment.apiUrl}/api/users/balance/adjust`, { amount: delta }).pipe(
       tap((updatedUser) => {
         this.setCurrentUser(updatedUser);
+      }),
+      catchError((error) => {
+        console.warn('Error al actualizar balance en backend:', error);
+        // Si falla, intentar obtener el usuario actualizado
+        return this.syncBalanceFromBackend();
       })
     );
   }
 
-  // Sincronizar saldo desde el servidor
+  // Sincronizar saldo desde el backend
   syncBalanceFromBackend(): Observable<AuthUser> {
     return this.http.get<AuthUser>(`${environment.apiUrl}/api/users/me`).pipe(
       tap((user) => {
         this.setCurrentUser(user);
+      }),
+      catchError((error) => {
+        console.warn('Error al obtener usuario desde backend:', error);
+        // Si falla, retornar el usuario local
+        const user = this.getCurrentUser();
+        return of(user as AuthUser);
       })
     );
   }

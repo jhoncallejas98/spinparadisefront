@@ -270,45 +270,30 @@ export class GamesComponent {
     // Reiniciar la ruleta a su posición inicial
     this.resetWheel();
     
-    // Actualizar el saldo del usuario
+    // Actualizar el saldo del usuario en el backend
     if (this.pendingBalanceUpdate > 0) {
-      // Actualizar localmente primero para respuesta inmediata
-      this.auth.updateBalanceLocallyBy(this.pendingBalanceUpdate);
-      this.user = this.auth.getCurrentUser();
-      
-      // Luego sincronizar con el servidor
       this.auth.updateBalanceInBackend(this.pendingBalanceUpdate).subscribe({
         next: (user) => {
           this.user = user;
         },
         error: (error) => {
-          console.warn('Error al sincronizar ganancia con backend, usando saldo local');
+          console.warn('Error al actualizar saldo en backend');
         }
       });
       this.pendingBalanceUpdate = 0;
     } else if (this.pendingBalanceDelta !== 0) {
-      // Actualizar localmente primero para respuesta inmediata
-      this.auth.updateBalanceLocallyBy(this.pendingBalanceDelta);
-      this.user = this.auth.getCurrentUser();
-      
-      // Luego sincronizar con el servidor
       this.auth.updateBalanceInBackend(this.pendingBalanceDelta).subscribe({
         next: (user) => {
           this.user = user;
         },
         error: (error) => {
-          console.warn('Error al sincronizar pérdida con backend, usando saldo local');
+          console.warn('Error al actualizar saldo en backend');
         }
       });
       this.pendingBalanceDelta = 0;
     }
     
     this.refresh();
-    
-    // Sincronizar saldo después de un segundo
-    setTimeout(() => {
-      this.syncBalanceAuto();
-    }, 1000);
   }
 
   // Reiniciar la ruleta a su posición inicial
@@ -319,20 +304,6 @@ export class GamesComponent {
       wheel.style.transform = 'rotate(0deg)';
       wheel.style.setProperty('--final-rotation', '0deg');
     }
-  }
-
-  // Sincronizar saldo con el servidor automáticamente
-  private syncBalanceAuto() {
-    this.auth.syncBalanceSafely().subscribe({
-      next: (user) => {
-        if (user) {
-          this.user = user;
-        }
-      },
-      error: (error) => {
-        console.warn('Error en sincronización automática, usando saldo local');
-      }
-    });
   }
 
   // Verificar si un número es rojo en la ruleta
@@ -402,9 +373,6 @@ export class GamesComponent {
         this.uiMsg = 'Apuesta creada. Ahora Cierra la ronda para poder Girar.';
         this.hasBet = true;
         this.canClose = true;
-        
-        // Sincronizar saldo después de crear la apuesta
-        this.syncBalanceAuto();
         
         this.refresh();
       },
