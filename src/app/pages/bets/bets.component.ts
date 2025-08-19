@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { BetsService, BetItem, Bet } from '../../services/bets.service';
+import { BetsService, BetItem, Bet, BetResponse } from '../../services/bets.service';
 
 @Component({
   selector: 'app-bets',
@@ -29,7 +29,8 @@ export class BetsComponent {
   placeBet() {
     const value: any = this.betType === 'numero' ? Number(this.betValue) : this.betValue;
     const items: BetItem[] = [{ type: this.betType, value, amount: this.amount }];
-    this.betsService.createBet(this.gameNumber, items).subscribe(() => {
+    this.betsService.createBet(this.gameNumber, items).subscribe((response: BetResponse) => {
+      console.log('Apuesta creada:', response.message);
       this.load();
     });
   }

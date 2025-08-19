@@ -17,7 +17,10 @@ export class RoundSpinComponent {
   }
   spin() {
     if (!this.gameNumber) return;
-    this.games.spin(this.gameNumber).subscribe(g => this.msg = `Resultado: ${g.winningNumber} (${g.winningColor})`);
+    this.games.spin(this.gameNumber).subscribe(response => {
+      const game = response.game;
+      this.msg = `Resultado: ${game.winningNumber} (${game.winningColor})`;
+    });
   }
 }
 

@@ -1,8 +1,12 @@
 import { HttpInterceptorFn } from '@angular/common/http';
+import { inject } from '@angular/core';
+import { AuthService } from './auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   try {
-    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+    const authService = inject(AuthService);
+    const token = authService.getToken();
+    
     if (token) {
       req = req.clone({
         setHeaders: {
@@ -10,7 +14,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         }
       });
     }
-  } catch {}
+  } catch (error) {
+    console.warn('Error en interceptor de autenticación:', error);
+  }
+  
   return next(req);
 };
 

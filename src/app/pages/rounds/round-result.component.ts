@@ -15,7 +15,7 @@ export class RoundResultComponent {
   constructor(route: ActivatedRoute, http: HttpClient) {
     const id = route.snapshot.paramMap.get('id');
     if (id) {
-      http.get(`${environment.apiUrl}/api/games/${id}/result`).subscribe((d) => (this.result = d));
+      http.get(`${environment.apiUrl}/api/games/${id}/results`).subscribe((d) => (this.result = d));
     }
   }
 }

@@ -29,8 +29,16 @@ export class AddBalanceComponent {
     this.balance = this.auth.getCurrentUser()?.balance ?? 0;
   }
   add() {
-    this.http.post<{ balance: number }>(`${environment.apiUrl}/api/users/balance/add`, { amount: this.amount })
-      .subscribe({ next: (r) => { this.balance = r.balance; this.msg = 'Saldo actualizado'; }, error: (e) => this.msg = e?.error?.msg || 'Error' });
+    if (this.amount <= 0) {
+      this.msg = 'El monto debe ser mayor a 0';
+      return;
+    }
+    
+    // Actualizar saldo localmente ya que no hay endpoint para usuarios regulares
+    this.auth.updateBalanceLocallyBy(this.amount);
+    this.balance = this.auth.getCurrentUser()?.balance ?? 0;
+    this.msg = 'Saldo actualizado localmente';
+    this.amount = 0;
   }
 }
 

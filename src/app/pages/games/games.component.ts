@@ -27,6 +27,7 @@ export class GamesComponent {
   
   // Resultados del juego
   lastWinningNumber?: number;
+  
   lastWinningColor?: 'rojo'|'negro'|'verde';
   resultMsg = '';
   showResultModal = false;
@@ -38,10 +39,6 @@ export class GamesComponent {
   canClose = false;
   canSpin = false;
   isSpinning = false;
-
-  // Variables para actualizar saldo después del modal
-  pendingBalanceUpdate = 0;
-  pendingBalanceDelta = 0;
 
   @ViewChild('gameWheel') gameWheel!: ElementRef<HTMLDivElement>;
 
@@ -162,16 +159,22 @@ export class GamesComponent {
     this.message = '¡Girando la ruleta...';
     
     this.gamesService.spin(this.currentGameNumber).subscribe({ 
-      next: (g) => {
+      next: (response) => {
+        const game = response.game;
         // Obtener el número ganador del servidor
-        this.lastWinningNumber = g.winningNumber;
+        this.lastWinningNumber = game.winningNumber;
         
         // Determinar el color del número ganador
         let color = 'verde';
-        if (g.winningNumber && g.winningNumber > 0) {
-          color = this.isRed(g.winningNumber) ? 'rojo' : 'negro';
+        if (game.winningNumber && game.winningNumber > 0) {
+          color = this.isRed(game.winningNumber) ? 'rojo' : 'negro';
         }
         this.lastWinningColor = color as any;
+        
+        // Actualizar el saldo del usuario con el nuevo saldo del backend
+        if (this.user && response.results && response.results.newBalance !== undefined) {
+          this.user.balance = response.results.newBalance;
+        }
         
         // Calcular si ganó y cuánto
         let won = false;
@@ -181,27 +184,18 @@ export class GamesComponent {
           // Apuesta por color paga 1:1 (apuesta + ganancia)
           payout = won ? this.amount + this.amount : 0;
         } else if (this.betType === 'numero' && this.selectedNumber !== null) {
-          won = (this.selectedNumber === g.winningNumber);
+          won = (this.selectedNumber === game.winningNumber);
           // Apuesta por número paga 35:1 (apuesta + 35x ganancia)
           payout = won ? this.amount + (this.amount * 35) : 0;
         }
         
         this.won = won;
-        this.resultMsg = won
+        this.resultMsg = response.message || (won
           ? `¡Ganaste! Pago estimado ${payout}`
-          : 'Perdiste esta ronda';
-        
-        // Guardar para actualizar saldo cuando se cierre el modal
-        if (won) {
-          this.pendingBalanceUpdate = payout;
-          this.pendingBalanceDelta = 0;
-        } else {
-          this.pendingBalanceUpdate = 0;
-          this.pendingBalanceDelta = -this.amount;
-        }
+          : 'Perdiste esta ronda');
         
         // Animar la ruleta hacia el número ganador
-        this.animateWheel(g.winningNumber!);
+        this.animateWheel(game.winningNumber!);
       }, 
       error: (e: any) => {
         this.stopSpinning();
@@ -270,28 +264,17 @@ export class GamesComponent {
     // Reiniciar la ruleta a su posición inicial
     this.resetWheel();
     
-    // Actualizar el saldo del usuario en el backend
-    if (this.pendingBalanceUpdate > 0) {
-      this.auth.updateBalanceInBackend(this.pendingBalanceUpdate).subscribe({
-        next: (user) => {
+    // Sincronizar el saldo desde el backend ya que los cambios se manejan automáticamente
+    this.auth.syncBalanceSafely().subscribe({
+      next: (user) => {
+        if (user) {
           this.user = user;
-        },
-        error: (error) => {
-          console.warn('Error al actualizar saldo en backend');
         }
-      });
-      this.pendingBalanceUpdate = 0;
-    } else if (this.pendingBalanceDelta !== 0) {
-      this.auth.updateBalanceInBackend(this.pendingBalanceDelta).subscribe({
-        next: (user) => {
-          this.user = user;
-        },
-        error: (error) => {
-          console.warn('Error al actualizar saldo en backend');
-        }
-      });
-      this.pendingBalanceDelta = 0;
-    }
+      },
+      error: (error) => {
+        console.warn('Error al sincronizar saldo desde backend');
+      }
+    });
     
     this.refresh();
   }
@@ -369,8 +352,12 @@ export class GamesComponent {
     const items: BetItem[] = [{ type: this.betType, value, amount: this.amount }];
     
     this.betsService.createBet(this.currentGameNumber!, items).subscribe({
-      next: () => {
-        this.uiMsg = 'Apuesta creada. Ahora Cierra la ronda para poder Girar.';
+      next: (response) => {
+        // Actualizar el saldo del usuario con el nuevo saldo del backend
+        if (this.user) {
+          this.user.balance = response.newBalance;
+        }
+        this.uiMsg = response.message || 'Apuesta creada. Ahora Cierra la ronda para poder Girar.';
         this.hasBet = true;
         this.canClose = true;
         

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
 export type BetType = 'color' | 'numero';
 
@@ -19,6 +19,12 @@ export interface Bet {
   createdAt?: string;
 }
 
+export interface BetResponse {
+  bet: Bet;
+  newBalance: number;
+  message: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class BetsService {
   constructor(private http: HttpClient) {}
@@ -27,8 +33,8 @@ export class BetsService {
     return this.http.get<Bet[]>(`${environment.apiUrl}/api/bets`);
   }
 
-  createBet(gameNumber: number, betItems: BetItem[]): Observable<Bet> {
-    return this.http.post<Bet>(`${environment.apiUrl}/api/bets`, { gameNumber, bets: betItems });
+  createBet(gameNumber: number, betItems: BetItem[]): Observable<BetResponse> {
+    return this.http.post<BetResponse>(`${environment.apiUrl}/api/bets`, { gameNumber, bets: betItems });
   }
 
   updateBet(id: string, betItems: BetItem[]): Observable<Bet> {

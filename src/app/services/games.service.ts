@@ -12,6 +12,12 @@ export interface Game {
   createdAt?: string;
 }
 
+export interface SpinResponse {
+  game: Game;
+  results: any; // You can define a more specific interface for results if needed
+  message: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class GamesService {
   constructor(private http: HttpClient) {}
@@ -28,10 +34,8 @@ export class GamesService {
     return this.http.post<Game>(`${environment.apiUrl}/api/games/${gameNumber}/close`, {});
   }
 
-  spin(gameNumber: number): Observable<Game> {
-    return this.http
-      .post<{ game: Game } | Game>(`${environment.apiUrl}/api/games/${gameNumber}/spin`, {})
-      .pipe(map((resp: any) => (resp && resp.game ? resp.game : resp as Game)));
+  spin(gameNumber: number): Observable<SpinResponse> {
+    return this.http.post<SpinResponse>(`${environment.apiUrl}/api/games/${gameNumber}/spin`, {});
   }
 }
 

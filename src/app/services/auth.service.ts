@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { Observable, tap, catchError, of } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 // Interfaz para el usuario autenticado
 export interface AuthUser {
@@ -76,15 +77,39 @@ export class AuthService {
     return !!this.getToken();
   }
 
+  // Obtener el saldo actual desde el backend
+  getCurrentBalance(): Observable<number> {
+    return this.http.get<{ balance: number }>(`${environment.apiUrl}/api/me/balance`).pipe(
+      map(response => response.balance),
+      tap(balance => {
+        // Actualizar el usuario local con el nuevo saldo
+        const user = this.getCurrentUser();
+        if (user) {
+          user.balance = balance;
+          this.setCurrentUser(user);
+        }
+      }),
+      catchError(error => {
+        console.warn('Error al obtener saldo desde backend:', error);
+        // Si falla, retornar el saldo local
+        const user = this.getCurrentUser();
+        return of(user?.balance || 0);
+      })
+    );
+  }
+
   // Actualizar datos del usuario desde el servidor
   refreshCurrentUser() {
-    const token = this.getToken();
-    if (!token) {
+    const user = this.getCurrentUser();
+    if (!user) {
       return this.http.get<null>('about:blank');
     }
-    return this.http.get<AuthUser>(`${environment.apiUrl}/api/users/me`).pipe(
-      tap((user) => {
-        if (user) this.setCurrentUser(user);
+    // Obtener el saldo actualizado desde el backend
+    return this.getCurrentBalance().pipe(
+      map(balance => {
+        const updatedUser = { ...user, balance };
+        this.setCurrentUser(updatedUser);
+        return updatedUser;
       })
     );
   }
@@ -100,43 +125,34 @@ export class AuthService {
     this.setCurrentUser(user);
   }
 
-  // Actualizar saldo en el backend
-  updateBalanceInBackend(delta: number): Observable<AuthUser> {
-    // Usar el endpoint que sí existe para ajustar balance
-    return this.http.post<AuthUser>(`${environment.apiUrl}/api/users/balance/adjust`, { amount: delta }).pipe(
-      tap((updatedUser) => {
-        this.setCurrentUser(updatedUser);
-      }),
-      catchError((error) => {
-        console.warn('Error al actualizar balance en backend:', error);
-        // Si falla, intentar obtener el usuario actualizado
-        return this.syncBalanceFromBackend();
-      })
-    );
-  }
-
-  // Sincronizar saldo desde el backend
+  // Sincronizar saldo desde el backend usando el nuevo endpoint
   syncBalanceFromBackend(): Observable<AuthUser> {
-    return this.http.get<AuthUser>(`${environment.apiUrl}/api/users/me`).pipe(
-      tap((user) => {
-        this.setCurrentUser(user);
-      }),
-      catchError((error) => {
-        console.warn('Error al obtener usuario desde backend:', error);
-        // Si falla, retornar el usuario local
+    return this.getCurrentBalance().pipe(
+      map(balance => {
         const user = this.getCurrentUser();
-        return of(user as AuthUser);
+        if (user) {
+          const updatedUser = { ...user, balance };
+          this.setCurrentUser(updatedUser);
+          return updatedUser;
+        }
+        return null as any;
       })
     );
   }
 
   // Sincronizar saldo de forma segura (con manejo de errores)
   syncBalanceSafely(): Observable<AuthUser | null> {
-    return this.http.get<AuthUser>(`${environment.apiUrl}/api/users/me`).pipe(
-      tap((user) => {
-        this.setCurrentUser(user);
+    return this.getCurrentBalance().pipe(
+      map(balance => {
+        const user = this.getCurrentUser();
+        if (user) {
+          const updatedUser = { ...user, balance };
+          this.setCurrentUser(updatedUser);
+          return updatedUser;
+        }
+        return null;
       }),
-      catchError((error) => {
+      catchError(error => {
         console.warn('No se pudo sincronizar saldo desde backend, usando saldo local');
         const localUser = this.getCurrentUser();
         return of(localUser);
